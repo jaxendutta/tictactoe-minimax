@@ -118,9 +118,9 @@ class ttt:
         if self.over:
             return
         self.buttons[move].config(state="disabled")
-        self.curwin = self.won(self.board)
-        if self.curwin is not None:
-            self.afterwin(self.curwin)
+        winner = self.won(self.board)
+        if winner is not None:
+            self.afterwin(winner)
             self.over = True
         elif self.move_count == 9 and self.full(self.board):
             info.set("It's a tie!")
