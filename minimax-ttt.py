@@ -1,6 +1,7 @@
 from tkinter import *
 from copy import deepcopy
 from operator import itemgetter
+from math import inf
 
 class ttt:
     win_patterns = [[0, 1, 2], [3, 4, 5], [6, 7, 8], # Rows
@@ -19,10 +20,10 @@ class ttt:
         self.over = False
         self.moves = [StringVar() for x in range(9)]
         self.apply_all(lambda x: x.set(" "), self.moves)
+        self.mem_table = {}
 
-    def opp(self, current):
-        if current == "X": return "O"
-        else: return "X"
+    def opp(self, player):
+        return "O" if player == "X" else "X"
 
     def apply_all(self, f, list):
         for i in list: f(i)
@@ -30,10 +31,10 @@ class ttt:
     def return_found(self, list):
         for e in list:
             if e: return e
-        return False
+        return None
 
     def afterwin(self, winner):
-        info.set("Player "+winner+" wins! Congratulations!")
+        info.set(f"Player {winner} wins! Congratulations!")
         if winner == "X": self.Xwins += 1
         else: self.Owins += 1
         scores.set("Scoreboard\n──────────\nX: " + str(self.Xwins) + "\tO: " + str(self.Owins))
@@ -46,7 +47,7 @@ class ttt:
         self.current = "X"
         self.move_count = 0
         self.over = False
-        info.set("It is Player X's turn!")
+        info.set("Player "+self.current+" starts the game!")
         self.board = [" " for x in self.board]
         self.update_board()
         for b in self.buttons: b.config(state="normal", disabledforeground="black", bg="#F0F0F0")
@@ -61,57 +62,50 @@ class ttt:
             return board[moves[0]]
         else: return None
 
-    def won(self, board):
+    def won(self, board) -> str:
         is_won = self.return_found([self.winpattern(board, x) for x in ttt.win_patterns])
         if is_won: return is_won
         else: return None
 
     def full(self, board):
-        for x in board:
-            if x == " ": return False
-        return True
+        return (" " not in board)
 
-    def minimax_init(self):
-        player = "O"
-        a = -1000
-        b = 1000
-        boardtoo = deepcopy(self.board)
-        best = -100
-        move = None
-        for x in range(9):
-            if boardtoo[x] == " ":
-                boardtoo[x] = player
-                value = self.minimax(self.opp(player), boardtoo, a, b)
-                boardtoo[x] = " "
-                if (value < best) or (player == "O" and value > best):
-                        best = value
-                        move = x
+    def smart(self):
+        board2 = deepcopy(self.board)
+        move = self.minimax(board2, True)[0]
         self.make_move(move)
 
-    def minimax(self, player, board, a, b):
-        boardtoo = deepcopy(board)
-        winner = self.won(boardtoo)
-        if winner == "O": return 1
-        elif winner == "X": return -1
-        elif self.full(boardtoo): return 0
-        if player == "O": best = -100
-        else: best = 100
+    def minimax(self, grid, maxPlayer):
+        key = str(maxPlayer) + ''.join(grid)
+        empty = [i for i, x in enumerate(grid) if x == " "]
+        record = lambda x: self.mem_table.setdefault(key, x)
+        if key in self.mem_table:
+            return self.mem_table[key]
+        if self.won(grid) == "O": return record((-1, len(empty) + 1))
+        elif self.won(grid) == "X": return record((-1, -1*(len(empty) + 1)))
+        elif self.full(grid): return record((-1, 0))
+        best = -1
+        if maxPlayer:
+            value = -inf
+            for m in empty:
+                grid[m] = "O"
+                newval = self.minimax(grid, False)[1]
+                if newval > value:
+                    value = newval
+                    best = m
+                grid[m] = " "
+            return record((best, value))
+        else:
+            value = inf
+            for m in empty:
+                grid[m] = "X"
+                newval = self.minimax(grid, True)[1]
+                if newval < value:
+                    value = newval
+                    best = m
+                grid[m] = " "
+            return record((best, value))
 
-        for i in range(9):
-            if boardtoo[i] == " ":
-                boardtoo[i] = player
-                value = self.minimax(self.opp(player), boardtoo, a, b)
-                boardtoo[i] = " "
-                if player == "O":
-                    best = max(best, value)
-                    a = min(a, best)
-                else:
-                    best = min(best, value)
-                    b = max(b, best)
-                if b <= a: return best
-        return best
-    
-    # Call this to make a move
     def make_move(self, move):
         on.config(state="disabled")
         self.move_count += 1
@@ -119,14 +113,14 @@ class ttt:
         info.set("It's Player "+self.opp(self.current)+"'s turn!")
         if self.current == "X" and on_var.get() and self.move_count < 9:
             self.current = self.opp(self.current)
-            self.minimax_init()
+            self.smart()
         else: self.current = self.opp(self.current)
         if self.over:
             return
         self.buttons[move].config(state="disabled")
-        winner = self.won(self.board)
-        if winner is not None:
-            self.afterwin(winner)
+        self.curwin = self.won(self.board)
+        if self.curwin is not None:
+            self.afterwin(self.curwin)
             self.over = True
         elif self.move_count == 9 and self.full(self.board):
             info.set("It's a tie!")
@@ -134,9 +128,7 @@ class ttt:
             self.over = True
         self.update_board()
 
-# -------------------------------------
-#             Game GUI Setup
-# -------------------------------------
+# ------------Game GUI Setup------------
 
 window = Tk()
 window.title("Anirban's Tic-Tac-Toe")
@@ -147,8 +139,6 @@ game = ttt()
 welframe = Frame(window)
 welframe.pack()
 welframe.config(bg="#36454f")
-#╔═╗╚╝
-#─│┌┐└┘
 wel = "Tic-Tac-Toe with Minimax AI"
 welcome = Label(welframe, text="╔"+"═"*(len(wel)-10)+"╗\n║ "+wel+" ║\n╚"+"═"*(len(wel)-10)+"╝", 
                 font=('OCR A Extended', 20, ), bg="#36454f", fg="white", padx=10)
@@ -177,7 +167,7 @@ infoframe = Frame(window)
 infoframe.pack()
 infoframe.config(bg="#36454f")
 info = StringVar()
-info.set("It's Player X's turn!")
+info.set("Player X starts the game!")
 infoboard = Label(infoframe, textvariable=info, font=('OCR A Extended', 15), bg="#36454f", fg="white")
 infoboard.pack(pady=10)
 
