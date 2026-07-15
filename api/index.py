@@ -1,8 +1,17 @@
 from flask import Flask, jsonify, request
 from copy import deepcopy
 from math import inf
+import os
 
 app = Flask(__name__)
+
+@app.route("/")
+def serve_home():
+    # Safely locate and read index.html from the root folder
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    html_path = os.path.join(root_dir, "index.html")
+    with open(html_path, "r") as f:
+        return f.read()
 
 class ttt:
     win_patterns = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
