@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tic-Tac-Toe + MiniMax</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            background: #36454f;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly;
+            height: 100dvh;
+            padding: 12px 16px;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: clamp(0.9em, 3.8vmin, 1.6em);
+            text-align: center;
+            border: 2px solid white;
+            padding: clamp(5px, 1.2vmin, 10px) clamp(10px, 2.5vmin, 20px);
+            letter-spacing: 1px;
+        }
+
+        #scoreboard {
+            font-size: clamp(0.85em, 3vmin, 1.35em);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #ai-toggle {
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 1.5vmin, 10px);
+            font-size: clamp(0.85em, 2.8vmin, 1.15em);
+            background: #fff;
+            color: #333;
+            padding: clamp(5px, 1.2vmin, 8px) clamp(10px, 2vmin, 16px);
+            border-radius: 6px;
+        }
+
+        #ai-toggle input[type=checkbox] {
+            width: clamp(14px, 2.2vmin, 18px);
+            height: clamp(14px, 2.2vmin, 18px);
+            cursor: pointer;
+        }
+
+        #info {
+            font-size: clamp(0.85em, 2.8vmin, 1.25em);
+            text-align: center;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(3, min(26vmin, 110px));
+            grid-template-rows: repeat(3, min(26vmin, 110px));
+            gap: clamp(4px, 1vmin, 7px);
+        }
+
+        .cell {
+            background: #f0f0f0;
+            color: #222;
+            font-size: clamp(1.4em, 7vmin, 2.5em);
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .cell:hover:not(:disabled) {
+            background: #d8e8f0;
+        }
+
+        .cell:disabled {
+            cursor: default;
+        }
+
+        .cell.winner {
+            background: #28a745;
+            color: white;
+        }
+
+        .cell.tie {
+            background: #ffc107;
+            color: #333;
+        }
+
+        #replay-btn {
+            padding: clamp(6px, 1.3vmin, 10px) clamp(18px, 4vmin, 30px);
+            font-size: clamp(0.85em, 2.8vmin, 1.15em);
+            font-family: 'Courier New', Courier, monospace;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+
+        #replay-btn:hover {
+            background: #d8e8f0;
+        }
+
+        #reset-scores-btn {
+            margin-top: clamp(4px, 1vmin, 8px);
+            padding: clamp(3px, 0.8vmin, 6px) clamp(10px, 2vmin, 16px);
+            font-size: clamp(0.6em, 1.8vmin, 0.8em);
+            font-family: 'Courier New', Courier, monospace;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        #reset-scores-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: white;
+        }
+
+        #credit {
+            font-size: clamp(0.65em, 2vmin, 0.9em);
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        #credit a {
+            color: inherit;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Tic-Tac-Toe + MiniMax</h1>
+
+    <div id="scoreboard">
+        Scoreboard<br>
+        ──────────<br>
+        X: <span id="xwins">0</span> &nbsp;&nbsp; O: <span id="owins">0</span>
+        <br><button id="reset-scores-btn" onclick="resetScores()">Reset Scores</button>
+    </div>
+
+    <label id="ai-toggle">
+        <input type="checkbox" id="ai-checkbox" checked />
+        Enable MiniMax for Player O?
+    </label>
+
+    <div id="info">Player X starts the game!</div>
+
+    <div id="grid">
+        <button class="cell" data-index="0"></button>
+        <button class="cell" data-index="1"></button>
+        <button class="cell" data-index="2"></button>
+        <button class="cell" data-index="3"></button>
+        <button class="cell" data-index="4"></button>
+        <button class="cell" data-index="5"></button>
+        <button class="cell" data-index="6"></button>
+        <button class="cell" data-index="7"></button>
+        <button class="cell" data-index="8"></button>
+    </div>
+
+    <button id="replay-btn" onclick="replay()">Replay</button>
+
+    <div id="credit">by <a href="https://anirban.ca" target="_blank" rel="noopener">Jaxen Dutta</a></div>
+
+    <script>
+        let gameOver = false;
+        // 1. Initialize the board state client-side
+        let currentBoard = [" ", " ", " ", " ", " ", " ", " ", " ", " "];
+
+        const cells = document.querySelectorAll(".cell");
+        const info = document.getElementById("info");
+        const xwinsEl = document.getElementById("xwins");
+        const owinsEl = document.getElementById("owins");
+        const aiCheckbox = document.getElementById("ai-checkbox");
+
+        function getScores() {
+            return {
+                X: parseInt(localStorage.getItem("ttt_xwins") || "0"),
+                O: parseInt(localStorage.getItem("ttt_owins") || "0")
+            };
+        }
+
+        function addWin(player) {
+            const key = player === "X" ? "ttt_xwins" : "ttt_owins";
+            localStorage.setItem(key, (parseInt(localStorage.getItem(key) || "0") + 1).toString());
+        }
+
+        function renderScores() {
+            const s = getScores();
+            xwinsEl.textContent = s.X;
+            owinsEl.textContent = s.O;
+        }
+
+        function renderState(state) {
+            renderScores();
+            gameOver = state.over;
+
+            // 2. Keep the local board synced with the server's response
+            currentBoard = state.board;
+
+            cells.forEach((cell, i) => {
+                const val = state.board[i];
+                cell.textContent = val === " " ? "" : val;
+                cell.disabled = val !== " " || state.over;
+                cell.classList.remove("winner", "tie");
+            });
+
+            if (!state.over) {
+                info.textContent = "It's Player " + state.current + "'s turn!";
+            }
+        }
+
+        function applyResult(result, aiResult, state) {
+            const check = (res) => {
+                if (!res) return;
+                if (res.status === "win") {
+                    addWin(res.winner);
+                    renderState(state);
+                    info.textContent = "Player " + res.winner + " wins! Congratulations!";
+                    res.win_moves.forEach(idx => cells[idx].classList.add("winner"));
+                    cells.forEach(c => c.disabled = true);
+                } else if (res.status === "tie") {
+                    renderState(state);
+                    info.textContent = "It's a tie!";
+                    cells.forEach(c => c.classList.add("tie"));
+                    cells.forEach(c => c.disabled = true);
+                } else {
+                    renderState(state);
+                }
+            };
+
+            if (aiResult && aiResult.status !== "continue") {
+                check(aiResult);
+            } else {
+                check(result);
+            }
+        }
+
+        cells.forEach(cell => {
+            cell.addEventListener("click", async () => {
+                if (gameOver || cell.disabled) return;
+                const index = parseInt(cell.getAttribute("data-index"));
+                const aiOn = aiCheckbox.checked;
+
+                aiCheckbox.disabled = true;
+
+                // 3. Point to the new API route and send the board state
+                const response = await fetch("/api/move", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        board: currentBoard,
+                        cell: index,
+                        ai_on: aiOn
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) return;
+
+                applyResult(data.result, data.ai_result, data.state);
+
+                if (!data.state.over) {
+                    aiCheckbox.disabled = false;
+                }
+            });
+        });
+
+        // 4. Replay now handles the reset locally instead of calling the server
+        function replay() {
+            currentBoard = [" ", " ", " ", " ", " ", " ", " ", " ", " "];
+            renderState({ board: currentBoard, over: false, current: "X" });
+            info.textContent = "Player X starts the game!";
+            aiCheckbox.disabled = false;
+        }
+
+        function resetScores() {
+            localStorage.removeItem("ttt_xwins");
+            localStorage.removeItem("ttt_owins");
+            renderScores();
+        }
+
+        // 5. Initialize the game locally on load instead of fetching from the server
+        replay();
+    </script>
+</body>
+
+</html>
